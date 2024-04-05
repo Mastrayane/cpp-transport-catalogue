@@ -3,11 +3,15 @@
 #include <iterator>
 #include <iostream>
 
+
+
 #include "input_reader.h"
 
 bool operator==(const CommandDescription& lhs, const CommandDescription& rhs) {
 	return lhs.command == rhs.command && lhs.id == rhs.id && lhs.description == rhs.description;
 }
+
+
 
 /**
  * Парсит строку вида "10.123,  -30.1837" и возвращает пару координат (широта, долгота)
@@ -110,6 +114,30 @@ CommandDescription ParseCommandDescription(std::string_view line) {
 			std::string(line.substr(colon_pos + 1)) };
 }
 
+void InputReader::ReadingStream(transport_catalogue::TransportCatalogue& catalogue, InputReader& reader, int const& base_request_count)
+{
+	for (int i = 0; i < base_request_count; ++i) {
+		std::string line;
+		getline(std::cin, line);
+		reader.ParseLine(line);
+	}
+	reader.ApplyCommands(catalogue);
+}
+
+
+void InputReader::ReadingStream(transport_catalogue::TransportCatalogue& catalogue, InputReader& reader, std::istream& input)
+{
+	int base_request_count;
+	input >> base_request_count >> std::ws;
+	for (int i = 0; i < base_request_count; ++i) {
+		std::string line;
+		getline(input, line);
+		reader.ParseLine(line);
+	}
+	reader.ApplyCommands(catalogue);
+}
+
+
 void InputReader::ParseLine(std::string_view line) {
 	auto command_description = ParseCommandDescription(line);
 
@@ -118,12 +146,14 @@ void InputReader::ParseLine(std::string_view line) {
 	}
 }
 
+
+
 std::vector<CommandDescription> InputReader::GetCommands() {
 	return commands_;
 }
 
 void InputReader::ApplyCommands([[maybe_unused]] transport_catalogue::TransportCatalogue& catalogue) const {
-	
+
 	for (auto& com : commands_) {
 		if (com.command == "Stop") {
 			transport_catalogue::geo::Coordinates G = ParseCoordinates(com.description);
@@ -134,4 +164,5 @@ void InputReader::ApplyCommands([[maybe_unused]] transport_catalogue::TransportC
 			catalogue.AddRoute(com.id, stops);
 		}
 	}
-}// место для вашего кода
+}
+
