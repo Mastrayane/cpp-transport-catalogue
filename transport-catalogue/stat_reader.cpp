@@ -82,4 +82,23 @@ void ParseAndPrintStat(const transport_catalogue::TransportCatalogue& tansport_c
 			}
 		}
 	}
-}// место для вашего кода
+}
+
+void RequestStatistics(transport_catalogue::TransportCatalogue& catalogue, std::istream& input) {
+	int stat_request_count;
+	input >> stat_request_count >> std::ws;
+	for (int i = 0; i < stat_request_count; ++i) {
+		std::string line;
+		getline(input, line);
+		ParseAndPrintStat(catalogue, line, std::cout);
+	}
+}
+
+void RequestStatistics(transport_catalogue::TransportCatalogue& catalogue, std::istream& input, int const& stat_request_count)
+{
+	for (int i = 0; i < stat_request_count; ++i) {
+		std::string line;
+		getline(input, line);
+		ParseAndPrintStat(catalogue, line, std::cout);
+	}
+}
