@@ -36,4 +36,8 @@ namespace stats {
 } // конец namespace stat
 
 void ParseAndPrintStat(const transport_catalogue::TransportCatalogue& tansport_catalogue, std::string_view request,
-	std::ostream& output);// место для вашего кода
+	std::ostream& output);
+
+void RequestStatistics(transport_catalogue::TransportCatalogue& catalogue, std::istream& input);
+
+void RequestStatistics(transport_catalogue::TransportCatalogue& catalogue, std::istream& input, int const& stat_request_count);
