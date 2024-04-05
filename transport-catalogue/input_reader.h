@@ -3,6 +3,9 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <iosfwd>
+
+
 
 #include "geo.h"
 #include "transport_catalogue.h"
@@ -29,6 +32,11 @@ transport_catalogue::RouteType ParseRouteType(std::string_view route);
 
 class InputReader {
 public:
+
+	static void ReadingStream(transport_catalogue::TransportCatalogue& catalogue, InputReader& reader, int const& base_request_count);
+
+	void ReadingStream(transport_catalogue::TransportCatalogue& catalogue, InputReader& reader, std::istream& input);
+
 	/**
 	 * Парсит строку в структуру CommandDescription и сохраняет результат в commands_
 	 */
@@ -47,4 +55,3 @@ private:
 };
 
 
-// место для вашего кода
