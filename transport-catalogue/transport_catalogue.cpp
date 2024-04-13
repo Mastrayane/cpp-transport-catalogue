@@ -21,7 +21,7 @@ namespace transport_catalogue {
 		}
 	}
 
-	void TransportCatalogue::AddRoute(string_view number, std::vector<std::string_view> stops) {
+	void TransportCatalogue::AddRoute(string_view number, const std::vector<std::string_view> stops) {
 		Bus result;
 		result.number = { number.begin(), number.end() };
 
