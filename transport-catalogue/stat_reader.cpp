@@ -1,104 +1,66 @@
-#include <string_view>
-#include <iostream>
-#include <algorithm>
-
 #include "stat_reader.h"
-#include "input_reader.h"
 
+#include <iomanip>
+#include <iostream>
+#include <set>
 
-stats::CommandStat ParseCommandDesStat(std::string_view line) {
+using namespace std;
 
-	stats::CommandStat commandStat;
+namespace transport_catalogue {
 
-	auto space_pos = line.find(' ');
-	if (space_pos == line.npos) {
-		return commandStat;
-	}
+	namespace output {
 
-	commandStat.command = std::string(line.substr(0, space_pos));
-	commandStat.id = std::string(line.substr(space_pos + 1));
-
-	return commandStat;
-
-}
-
-void stats::OutputDataReader::ParseLine(std::string_view line) {
-	auto command_description = ParseCommandDesStat(line);
-	if (command_description) {
-		commands_.push_back(std::move(command_description));
-	}
-}
-
-std::vector<stats::CommandStat> stats::OutputDataReader::GetCommands() const {
-	return commands_;
-};
-
-
-void ParseAndPrintStat(const transport_catalogue::TransportCatalogue& tansport_catalogue, std::string_view request,
-	std::ostream& output) {
-	stats::OutputDataReader reader;
-	reader.ParseLine(request);
-	std::vector<stats::CommandStat> commands = reader.GetCommands();
-
-
-	for (auto const& com : commands) {
-
-		if (com.command == "Bus") {
-			transport_catalogue::BusPtr busptr = tansport_catalogue.GetRoute(com.id);
-
-			if (busptr == nullptr) {
-				output << "Bus " << com.id << ": not found" << std::endl;
+		void OutputRouteAbout(TransportCatalogue& tc, std::string_view route) {
+			if (tc.GetRoute(route) == nullptr) {
+				cout << "Bus "s << route << ": not found"s << endl;
 			}
 			else {
-				transport_catalogue::BusStat bus = tansport_catalogue.GetStatistics(busptr);
-				output << "Bus " << com.id << ": " << bus.number_of_stops << " stops on route, " <<
-					bus.unique_stops << " unique stops, " <<
-					bus.distance << " route length" << std::endl;
+				BusStat stat = tc.GetStatistics(tc.GetRoute(route));
+
+				cout << "Bus "s << route << ": "s << stat.number_of_stops
+					<< " stops on route, "s << stat.unique_stops
+					<< " unique stops, "s << std::setprecision(6)
+					<< stat.real_distance << " route length, "s
+					<< std::setprecision(6) << stat.curvature
+					<< " curvature"s << endl;
 			}
 		}
 
-		else if (com.command == "Stop") {
-			transport_catalogue::StopPtr stopptr = tansport_catalogue.GetStop(com.id);
+		void OutputStopAbout(TransportCatalogue& tc, string_view name) {
+			bool flag = tc.GetStop(name) != nullptr;
+			set<string_view> buses = tc.GetBuses(name);
 
-			if (stopptr == nullptr) {
-				output << "Stop " << com.id << ": not found" << std::endl;
-			}
-			else {
-
-				std::set<std::string_view> buses = tansport_catalogue.SetBusByStop(stopptr);
-
-				if (buses.empty()) {
-					output << "Stop " << com.id << ": no buses" << std::endl;
+			if (flag) {
+				if (buses.size() == 0) {
+					cout << "Stop "s << name << ": no buses"s << endl;
 				}
 				else {
-
-					output << "Stop " << com.id << ": buses";
-					for (auto const& bus : buses) {
-						output << " " << bus;
+					cout << "Stop "s << name << ": buses "s;
+					for (auto it = buses.begin(); it != buses.end(); ++it) {
+						if (next(it) != buses.end()) {
+							cout << (*it) << " "s;
+						}
+						else {
+							cout << (*it);
+						}
 					}
-					output << std::endl;
-
+					cout << endl;
 				}
 			}
+			else {
+				cout << "Stop "s << name << ": not found"s << endl;
+			}
 		}
-	}
-}
 
-void RequestStatistics(transport_catalogue::TransportCatalogue& catalogue, std::istream& input) {
-	int stat_request_count;
-	input >> stat_request_count >> std::ws;
-	for (int i = 0; i < stat_request_count; ++i) {
-		std::string line;
-		getline(input, line);
-		ParseAndPrintStat(catalogue, line, std::cout);
-	}
-}
+		void OutputAbout(TransportCatalogue& tc, query::Command com) {
+			if (com.type == query::QueryType::StopX) {
+				OutputStopAbout(tc, com.name);
+			}
 
-void RequestStatistics(transport_catalogue::TransportCatalogue& catalogue, std::istream& input, int const& stat_request_count)
-{
-	for (int i = 0; i < stat_request_count; ++i) {
-		std::string line;
-		getline(input, line);
-		ParseAndPrintStat(catalogue, line, std::cout);
-	}
-}
+			if (com.type == query::QueryType::BusX) {
+				OutputRouteAbout(tc, com.name);
+			}
+		}
+
+	}//namespace output
+}//namespace transport_catalogue
