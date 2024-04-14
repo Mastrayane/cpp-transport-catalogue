@@ -1,168 +1,272 @@
-#include <algorithm>
-#include <cassert>
-#include <iterator>
-#include <iostream>
-
-
-
 #include "input_reader.h"
+#include "stat_reader.h"
 
-bool operator==(const CommandDescription& lhs, const CommandDescription& rhs) {
-	return lhs.command == rhs.command && lhs.id == rhs.id && lhs.description == rhs.description;
-}
+#include <algorithm>
+#include <unordered_map>
 
+using namespace std;
 
+namespace transport_catalogue {
 
-/**
- * Парсит строку вида "10.123,  -30.1837" и возвращает пару координат (широта, долгота)
- */
-transport_catalogue::geo::Coordinates ParseCoordinates(std::string_view str) {
-	static const double nan = std::nan("");
+    namespace query {
 
-	auto not_space = str.find_first_not_of(' ');
-	auto comma = str.find(',');
+        inline std::vector<std::string_view> Split(std::string_view str, char delim) {
+            std::vector<std::string_view> result;
+            int64_t pos = 0;
+            const int64_t pos_end = str.npos;
 
-	if (comma == str.npos) {
-		return { nan, nan };
-	}
+            while (true) {
+                int64_t delimiter = str.find(delim, pos);
+                result.push_back(delimiter == pos_end ? str.substr(pos) : str.substr(pos, delimiter - pos));
 
-	auto not_space2 = str.find_first_not_of(' ', comma + 1);
+                if (delimiter == pos_end) {
+                    break;
+                }
+                else {
+                    pos = delimiter + 1;
+                }
+            }
 
-	double lat = std::stod(std::string(str.substr(not_space, comma - not_space)));
-	double lng = std::stod(std::string(str.substr(not_space2)));
+            return result;
+        }
 
-	return { lat, lng };
-}
+        pair<string_view, string_view> Command::ParseCoordinates(string_view latitude, string_view longitude) {
+            while (longitude.front() == ' ') {
+                longitude.remove_prefix(1);
+            }
 
-/**
- * Удаляет пробелы в начале и конце строки
- */
-std::string_view Trim(std::string_view string) {
-	const auto start = string.find_first_not_of(' ');
-	if (start == string.npos) {
-		return {};
-	}
-	return string.substr(start, string.find_last_not_of(' ') + 1 - start);
-}
+            while (latitude.front() == ' ') {
+                latitude.remove_prefix(1);
+            }
 
-/**
- * Разбивает строку string на n строк, с помощью указанного символа-разделителя delim
- */
-std::vector<std::string_view> Split(std::string_view string, char delim) {
-	std::vector<std::string_view> result;
+            while (longitude.back() == ' ') {
+                longitude.remove_suffix(1);
+            }
 
-	size_t pos = 0;
-	while ((pos = string.find_first_not_of(' ', pos)) < string.length()) {
-		auto delim_pos = string.find(delim, pos);
-		if (delim_pos == string.npos) {
-			delim_pos = string.size();
-		}
-		if (auto substr = Trim(string.substr(pos, delim_pos - pos)); !substr.empty()) {
-			result.push_back(substr);
-		}
-		pos = delim_pos + 1;
-	}
+            while (latitude.back() == ' ') {
+                latitude.remove_suffix(1);
+            }
 
-	return result;
-}
+            return make_pair(latitude, longitude);
+        }
 
-/**
- * Парсит маршрут.
- * Для кольцевого маршрута (A>B>C>A) возвращает массив названий остановок [A,B,C,A]
- * Для некольцевого маршрута (A-B-C-D) возвращает массив названий остановок [A,B,C,D,C,B,A]
- */
-std::vector<std::string_view> ParseRoute(std::string_view route) {
-	if (route.find('>') != route.npos) {
-		return Split(route, '>');
-	}
+        vector<pair<string_view, string_view>> Command::ParseDistances(vector<string_view> vec_input) {
+            vector<pair<string_view, string_view>> result;
+            size_t i = 2;
 
-	auto stops = Split(route, '-');
-	std::vector<std::string_view> results(stops.begin(), stops.end());
-	results.insert(results.end(), std::next(stops.rbegin()), stops.rend());
+            while (i < vec_input.size()) {
+                while (vec_input[i].front() == ' ') {
+                    vec_input[i].remove_prefix(1);
+                }
 
-	return results;
-}
+                auto pos_m = vec_input[i].find('m');
+                string_view dist, stop;
+                dist = vec_input[i].substr(0, pos_m);
+                auto pos_t = vec_input[i].find('t');
+                pos_t += 2;
+                stop = vec_input[i].substr(pos_t, vec_input[i].length());
 
-transport_catalogue::RouteType ParseRouteType(std::string_view route) {
+                while (stop.front() == ' ') {
+                    stop.remove_prefix(1);
+                }
 
-	if (route.find('>') != route.npos) {
-		return transport_catalogue::RouteType::Round;
-	}
-	else {
-		return transport_catalogue::RouteType::Direct;
-	}
-}
+                while (stop.back() == ' ') {
+                    stop.remove_suffix(1);
+                }
 
-CommandDescription ParseCommandDescription(std::string_view line) {
-	auto colon_pos = line.find(':');
-	if (colon_pos == line.npos) {
-		return {};
-	}
+                result.push_back({ dist, stop });
+                ++i;
+            }
+            return result;
+        }
 
-	auto space_pos = line.find(' ');
-	if (space_pos >= colon_pos) {
-		return {};
-	}
+        vector<string_view> Command::ParseBuses(vector<string_view> vec_input) {
+            vector<string_view> result;
+            vector<string_view> parsed_buses;
 
-	auto not_space = line.find_first_not_of(' ', space_pos);
-	if (not_space >= colon_pos) {
-		return {};
-	}
+            if (vec_input.size() > 3) {
+                if (desc_command.find('-') != string::npos) {
+                    route_type = RouteType::Direct;
+                    parsed_buses = Split(desc_command, '-');
+                }
 
-	return { std::string(line.substr(0, space_pos)),
-			std::string(line.substr(not_space, colon_pos - not_space)),
-			std::string(line.substr(colon_pos + 1)) };
-}
+                if (desc_command.find('>') != string::npos) {
+                    route_type = RouteType::Round;
+                    parsed_buses = Split(desc_command, '>');
+                }
+            }
+            for (size_t i = 0; i < parsed_buses.size(); ++i) {
+                while (parsed_buses[i].front() == ' ') {
+                    parsed_buses[i].remove_prefix(1);
+                }
 
-void InputReader::ReadingStream(transport_catalogue::TransportCatalogue& catalogue, InputReader& reader, int const& base_request_count)
-{
-	for (int i = 0; i < base_request_count; ++i) {
-		std::string line;
-		getline(std::cin, line);
-		reader.ParseLine(line);
-	}
-	reader.ApplyCommands(catalogue);
-}
+                while (parsed_buses[i].back() == ' ') {
+                    parsed_buses[i].remove_suffix(1);
+                }
 
+                result.push_back(parsed_buses[i]);
+            }
 
-void InputReader::ReadingStream(transport_catalogue::TransportCatalogue& catalogue, InputReader& reader, std::istream& input)
-{
-	int base_request_count;
-	input >> base_request_count >> std::ws;
-	for (int i = 0; i < base_request_count; ++i) {
-		std::string line;
-		getline(input, line);
-		reader.ParseLine(line);
-	}
-	reader.ApplyCommands(catalogue);
-}
+            return result;
+        }
 
+        void Command::ParseCommandString(string input) {
+            static std::unordered_map<std::string, QueryType> const table = {
+                {"Stop", QueryType::StopX}, {"Bus", QueryType::BusX}
+            };
+            origin_command = move(input);
+            auto vec_input = Split(origin_command, ' ');
+            auto pos_start = origin_command.find_first_not_of(' ');
+            auto pos_end_of_command = origin_command.find(' ', pos_start);
+            string temp_type = { origin_command.begin() + pos_start, origin_command.begin() + pos_end_of_command };
 
-void InputReader::ParseLine(std::string_view line) {
-	auto command_description = ParseCommandDescription(line);
+            switch (table.at(temp_type)) {
+            case QueryType::StopX:
+                type = QueryType::StopX;
+                if (auto pos = origin_command.find(':'); pos != string::npos) {
+                    //Stop stop1:
+                    desc_command = origin_command.substr(pos + 2, origin_command.length() - pos - 1);
+                    auto temp = Split(desc_command, ',');
 
-	if (command_description) {
-		commands_.push_back(std::move(command_description));
-	}
-}
+                    for (size_t i = pos_end_of_command; i < pos; ++i) {
+                        name += origin_command[i];
+                    }
 
+                    while (name.front() == ' ') {
+                        name.erase(name.begin());
+                    }
 
+                    coordinates = ParseCoordinates(temp[0], temp[1]);
 
-std::vector<CommandDescription> InputReader::GetCommands() {
-	return commands_;
-}
+                    if (temp.size() > 2) {
+                        distances = ParseDistances(temp);
+                    }
+                }
+                else {
+                    //Stop stop1
+                    for (size_t i = pos_end_of_command; i < origin_command.size(); ++i) {
+                        name += origin_command[i];
+                    }
 
-void InputReader::ApplyCommands([[maybe_unused]] transport_catalogue::TransportCatalogue& catalogue) const {
+                    while (name.front() == ' ') {
+                        name.erase(name.begin());
+                    }
 
-	for (auto& com : commands_) {
-		if (com.command == "Stop") {
-			transport_catalogue::geo::Coordinates G = ParseCoordinates(com.description);
-			catalogue.AddStop(com.id, G.lat, G.lng);
-		}
-		else {
-			std::vector<std::string_view> stops = ParseRoute(com.description);
-			catalogue.AddRoute(com.id, stops);
-		}
-	}
-}
+                    while (name.back() == ' ') {
+                        name.erase(name.end() - 1);
+                    }
+                    break;
+                }
+                break;
+            case QueryType::BusX:
+                type = QueryType::BusX;
+                if (auto pos = origin_command.find(':'); pos != string::npos) {
+                    desc_command = origin_command.substr(pos + 2, origin_command.length() - pos - 1);
+                    //Bus bus1:
+                    for (size_t i = pos_end_of_command; i < pos; ++i) {
+                        name += origin_command[i];
+                    }
 
+                    while (name.front() == ' ') {
+                        name.erase(name.begin());
+                    }
+                    route = ParseBuses(vec_input);
+                }
+                else {
+                    //Bus bus1
+                    for (size_t i = pos_end_of_command; i < origin_command.size(); ++i) {
+                        name += origin_command[i];
+                    }
+
+                    while (name.front() == ' ') {
+                        name.erase(name.begin());
+                    }
+
+                    while (name.back() == ' ') {
+                        name.erase(name.end() - 1);
+                    }
+                    break;
+                }
+                break;
+            }
+        }
+
+        void InputReader::ParseInput() {
+            int query_count;
+            cin >> query_count;
+            cin.ignore();
+            string command;
+
+            for (int i = 0; i < query_count; ++i) {
+                getline(cin, command);
+                Command cur_command;
+                cur_command.ParseCommandString(move(command));
+                commands_.push_back(move(cur_command));
+            }
+        }
+
+        void InputReader::Load(TransportCatalogue& tc) {
+            //firstly with description
+            auto it_desc = partition(commands_.begin(), commands_.end(), [](Command com) {
+                return !com.desc_command.empty();
+                });
+            //firstly stop queries
+            auto it_stops = partition(commands_.begin(), it_desc, [](Command com) {
+                return com.type == QueryType::StopX;
+                });
+
+            //Stop X:
+            for (auto cur_it = commands_.begin(); cur_it != it_stops; ++cur_it) {
+                InputReader::LoadCommand(tc, *cur_it, 0);
+            }
+            //set stop distances
+            for (auto cur_it = commands_.begin(); cur_it != it_stops; ++cur_it) {
+                InputReader::LoadCommand(tc, *cur_it, 1);
+            }
+            //Bus X:
+            for (auto cur_it = it_stops; cur_it != it_desc; ++cur_it) {
+                InputReader::LoadCommand(tc, *cur_it, 0);
+            }
+            //last queries (output)
+            for (auto cur_it = it_desc; cur_it != commands_.end(); ++cur_it) {
+                InputReader::LoadCommand(tc, *cur_it, 0);
+            }
+        }
+
+        void InputReader::LoadCommand(TransportCatalogue& tc, Command com, bool dist) {
+            switch (com.type) {
+            case QueryType::StopX:
+                if (com.coordinates != pair<string_view, string_view>()) {
+                    string lat = { com.coordinates.first.begin(), com.coordinates.first.end() };
+                    string lon = { com.coordinates.second.begin(), com.coordinates.second.end() };
+
+                    if (dist == false) {
+                        tc.AddStop(com.name, stod(lat), stod(lon));
+                    }
+                    else {
+                        if (!com.distances.empty()) {
+                            for (auto& [dist, stop] : com.distances) {
+                                string dist_str = { dist.begin(), dist.end() };
+                                tc.SetStopDistance(com.name, stoull(dist_str), stop);
+                            }
+                        }
+                    }
+                }
+                else {
+                    output::OutputStopAbout(tc, com.name);
+                }
+
+                break;
+            case QueryType::BusX:
+                if (!com.route.empty()) {
+                    tc.AddRoute(com.name, com.route_type, com.route);
+                }
+                else {
+                    output::OutputRouteAbout(tc, com.name);
+                }
+                break;
+            }
+        }
+
+    }//namespace query
+}//namespace transport_catalogue
