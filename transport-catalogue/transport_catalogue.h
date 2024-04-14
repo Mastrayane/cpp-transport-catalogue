@@ -11,7 +11,7 @@
 
 namespace transport_catalogue {
 
-    enum RouteType {
+    enum class RouteType {
         Direct,
         Round
     };
@@ -55,9 +55,9 @@ namespace transport_catalogue {
 
     class TransportCatalogue {
     public:
-        void AddStop(std::string_view name, double latitude, double longitude);
+        void AddStop(std::string_view name, geo::Coordinates&& coordinates);
 
-        void AddRoute(std::string_view number, RouteType type, std::vector<std::string_view> stops);
+        void AddRoute(std::string_view number, RouteType type, const std::vector<std::string_view>& stops);
 
         BusPtr GetRoute(std::string_view name);
 
@@ -65,9 +65,9 @@ namespace transport_catalogue {
 
         std::set<std::string_view> GetBuses(std::string_view stop);
 
-        void SetStopDistance(std::string_view stop1, uint64_t dist, std::string_view stop2);
+        void SetStopDistance(std::string_view stop_from, uint64_t dist, std::string_view stop_to);
 
-        uint64_t GetStopDistance(StopPtr stop1, StopPtr stop2);
+        int GetStopDistance(StopPtr p_stop_from, StopPtr p_stop_to);
 
         BusStat GetStatistics(BusPtr bus);
 
