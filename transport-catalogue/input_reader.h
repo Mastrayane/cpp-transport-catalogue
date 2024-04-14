@@ -1,57 +1,56 @@
 #pragma once
 
-#include <string>
-#include <string_view>
-#include <vector>
-#include <iosfwd>
-
-
-
-#include "geo.h"
 #include "transport_catalogue.h"
 
-struct CommandDescription {
-	// Определяет, задана ли команда (поле command непустое)
-	explicit operator bool() const {
-		return !command.empty();
-	}
+#include <charconv>
+#include <iostream>
+#include <map>
+#include <sstream>
+#include <string>
+#include <vector>
 
-	bool operator!() const {
-		return !operator bool();
-	}
+namespace transport_catalogue {
 
-	std::string command;      // Название команды
-	std::string id;           // id маршрута или остановки
-	std::string description;  // Параметры команды
+    namespace query {
 
-};
+        enum class QueryType {
+            StopX,
+            BusX
+        };
 
-bool operator==(const CommandDescription& lhs, const CommandDescription& rhs);
-
-transport_catalogue::RouteType ParseRouteType(std::string_view route);
-
-class InputReader {
-public:
-
-	static void ReadingStream(transport_catalogue::TransportCatalogue& catalogue, InputReader& reader, int const& base_request_count);
-
-	void ReadingStream(transport_catalogue::TransportCatalogue& catalogue, InputReader& reader, std::istream& input);
-
-	/**
-	 * Парсит строку в структуру CommandDescription и сохраняет результат в commands_
-	 */
-	void ParseLine(std::string_view line);
-
-	/**
-	 * Наполняет данными транспортный справочник, используя команды из commands_
-	 */
-
-	void ApplyCommands(transport_catalogue::TransportCatalogue& catalogue) const;
-
-	std::vector<CommandDescription> GetCommands();
-
-private:
-	std::vector<CommandDescription> commands_;
-};
+        struct Command {
+            QueryType type;
+            std::string name;
+            //data
+            std::pair<std::string_view, std::string_view> coordinates;
+            std::vector<std::pair<std::string_view, std::string_view>> distances;
+            std::vector<std::string_view> route;
+            RouteType route_type = RouteType::Direct;
+            std::string origin_command;
+            std::string desc_command;
 
 
+            std::pair<std::string_view, std::string_view> ParseCoordinates(std::string_view latitude, std::string_view longitude);
+
+            std::vector<std::string_view> ParseBuses(std::vector<std::string_view> vec_input);
+
+            std::vector<std::pair<std::string_view, std::string_view>> ParseDistances(std::vector<std::string_view> vec_input);
+
+            void ParseCommandString(std::string input);
+
+        };
+
+        inline std::vector<std::string_view> Split(std::string_view string, char delim);
+
+        class InputReader {
+        public:
+            void Load(TransportCatalogue& tc);
+            void LoadCommand(TransportCatalogue& tc, Command com, bool dist);
+            void ParseInput();
+
+        private:
+            std::vector<Command> commands_;
+        };
+
+    }//namespace query
+}//namespace transport_catalogue
