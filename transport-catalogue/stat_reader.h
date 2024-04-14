@@ -1,43 +1,19 @@
 #pragma once
 
-#include <iosfwd>
-#include <string_view>
-#include <vector>
-
+#include "input_reader.h"
 #include "transport_catalogue.h"
 
-namespace stats {
-	struct CommandStat {
-		// Определяет, задана ли команда (поле command непустое)
-		explicit operator bool() const {
-			return !command.empty();
-		}
+#include <string_view>
 
-		bool operator!() const {
-			return !operator bool();
-		}
+namespace transport_catalogue {
 
-		std::string command;      // Название команды
-		std::string id;           // id маршрута или остановки
+	namespace output {
 
-	};
+		void OutputRouteAbout(TransportCatalogue& tc, std::string_view route);
 
-	class OutputDataReader {
-	public:
-		// Парсит строку в структуру CommandDescription и сохраняет результат в commands_
-		void ParseLine(std::string_view line);
+		void OutputStopAbout(TransportCatalogue& tc, std::string_view name);
 
-		std::vector<CommandStat> GetCommands() const;
+		void OutputAbout(TransportCatalogue& tc, query::Command com);
 
-	private:
-		std::vector<CommandStat> commands_;
-	};
-
-} // конец namespace stat
-
-void ParseAndPrintStat(const transport_catalogue::TransportCatalogue& tansport_catalogue, std::string_view request,
-	std::ostream& output);
-
-void RequestStatistics(transport_catalogue::TransportCatalogue& catalogue, std::istream& input);
-
-void RequestStatistics(transport_catalogue::TransportCatalogue& catalogue, std::istream& input, int const& stat_request_count);
+	}//namespace output
+}//transport_catalogue
