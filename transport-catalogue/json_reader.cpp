@@ -1,29 +1,31 @@
 #include "json_reader.h"
 
-
 const json::Node& JsonReader::GetBaseRequests() const {
-	try {
-		return input_.GetRoot().AsMap().at("base_requests");
+	auto it = input_.GetRoot().AsMap().find("base_requests");
+	if (it != input_.GetRoot().AsMap().end()) {
+		return it->second;
 	}
-	catch (const std::out_of_range&) {
+	else {
 		return dummy_;
 	}
 }
 
 const json::Node& JsonReader::GetStatRequests() const {
-	try {
-		return input_.GetRoot().AsMap().at("stat_requests");
+	auto it = input_.GetRoot().AsMap().find("stat_requests");
+	if (it != input_.GetRoot().AsMap().end()) {
+		return it->second;
 	}
-	catch (const std::out_of_range&) {
+	else {
 		return dummy_;
 	}
 }
 
 const json::Node& JsonReader::GetRenderSettings() const {
-	try {
-		return input_.GetRoot().AsMap().at("render_settings");
+	auto it = input_.GetRoot().AsMap().find("render_settings");
+	if (it != input_.GetRoot().AsMap().end()) {
+		return it->second;
 	}
-	catch (const std::out_of_range&) {
+	else {
 		return dummy_;
 	}
 }
