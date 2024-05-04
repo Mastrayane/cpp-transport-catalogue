@@ -225,79 +225,94 @@ namespace json {
 
 	}  // namespace
 
+
 	bool Node::IsInt() const {
-		return holds_alternative<int>(value_);
+		return holds_alternative<int>(*this);
 	}
 
 	bool Node::IsDouble() const {
-		return holds_alternative<double>(value_) || holds_alternative<int>(value_);
+		return holds_alternative<double>(*this) || holds_alternative<int>(*this);
 	}
 
 	bool Node::IsPureDouble() const {
-		return holds_alternative<double>(value_);
+		return holds_alternative<double>(*this);
 	}
 
 	bool Node::IsBool() const {
-		return holds_alternative<bool>(value_);
+		return holds_alternative<bool>(*this);
 	}
 
 	bool Node::IsString() const {
-		return holds_alternative<std::string>(value_);
+		return holds_alternative<std::string>(*this);
 	}
 
 	bool Node::IsNull() const {
-		return holds_alternative<std::nullptr_t>(value_);
+		return holds_alternative<std::nullptr_t>(*this);
 	}
 
 	bool Node::IsArray() const {
-		return holds_alternative<Array>(value_);
+		return holds_alternative<Array>(*this);
 	}
 
 	bool Node::IsMap() const {
-		return holds_alternative<Dict>(value_);
+		return holds_alternative<Dict>(*this);
 	}
 
 	int Node::AsInt() const {
-		if (!IsInt()) throw ParsingError("not int");
-		return std::get<int>(value_);
+		if (!IsInt()) {
+			throw std::logic_error("Not an int"s);
+		}
+		return std::get<int>(*this);
 	}
 
 	bool Node::AsBool() const {
-		if (!IsBool()) throw ParsingError("not bool");
-		return std::get<bool>(value_);
+		if (!IsBool()) {
+			throw ParsingError("not bool");
+		}
+		return std::get<bool>(*this);
 	}
 
 	double Node::AsDouble() const {
-		if (!IsDouble()) throw ParsingError("not double");
-		if (IsInt()) return static_cast<double>(std::get<int>(value_));
-		return std::get<double>(value_);
+		if (!IsDouble()) {
+			throw ParsingError("not double");
+		}
+		if (IsInt()) {
+			return static_cast<double>(std::get<int>(*this));
+		}
+		return std::get<double>(*this);
 	}
 
 	const std::string& Node::AsString() const {
-		if (!IsString()) throw ParsingError("not string");
-		return std::get<std::string>(value_);
+		if (!IsString()) {
+			throw ParsingError("not string");
+		}
+		return std::get<std::string>(*this);
 	}
 
 	const Array& Node::AsArray() const {
-		if (!IsArray()) throw ParsingError("not array");
-		return std::get<Array>(value_);
+		if (!IsArray()) {
+			throw ParsingError("not array");
+		}
+		return std::get<Array>(*this);
 	}
 
 	const Dict& Node::AsMap() const {
-		if (!IsMap()) throw ParsingError("wrong map");
-		return std::get<Dict>(value_);
+		if (!IsMap()) {
+			throw ParsingError("wrong map");
+		}
+		return std::get<Dict>(*this);
 	}
 
-	const Node::Value& Node::GetValue() const {
-		return value_;
+	const Node::variant& Node::GetValue() const {
+		return *this;
 	}
 
-	bool Node::operator==(const Node& rhs) const {
-		return value_ == rhs.value_;
+	bool operator==(const Node& lhs, const Node& rhs) {
+		return lhs.GetValue() == rhs.GetValue();
 	}
 
-	bool Node::operator!=(const Node& rhs) const {
-		return !(value_ == rhs.value_);
+	bool operator!=(const Node& lhs, const Node& rhs) {
+		return !(lhs == rhs);
 	}
 
 	Document::Document(Node root)
