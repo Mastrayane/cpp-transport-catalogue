@@ -1,27 +1,37 @@
 #pragma once
-
-#include "json.h"
+ 
 #include "transport_catalogue.h"
 #include "map_renderer.h"
-
-#include <sstream>
-
+#include "json_builder.h"
+ 
+using namespace transport_catalogue;
+using namespace map_renderer;
+using namespace transport_catalogue::detail::json;
+using namespace transport_catalogue::detail::json::builder;
+ 
+namespace request_handler {
+ 
 class RequestHandler {
 public:
-    RequestHandler(const transport::Catalogue& catalogue, const renderer::MapRenderer& renderer)
-        : catalogue_(catalogue)
-        , renderer_(renderer)
-    {
-    }
-
-    std::optional<transport::BusStat> GetBusStat(const std::string_view bus_number) const;
-    const std::set<std::string> GetBusesByStop(std::string_view stop_name) const;
-    bool IsBusNumber(const std::string_view bus_number) const;
-    bool IsStopName(const std::string_view stop_name) const;
-
-    svg::Document RenderMap() const;
-
+           
+    RequestHandler() = default;
+    
+    std::vector<geo::Coordinates> get_stops_coordinates(TransportCatalogue& catalogue_) const;
+    std::vector<std::string_view> get_sort_buses_names(TransportCatalogue& catalogue_) const;
+    
+    BusQueryResult bus_query(TransportCatalogue& catalogue, std::string_view str);
+    StopQueryResult stop_query(TransportCatalogue& catalogue, std::string_view stop_name);
+    
+    Node execute_make_node_stop(int id_request, const StopQueryResult& query_result);
+    Node execute_make_node_bus(int id_request, const BusQueryResult& query_result);
+    Node execute_make_node_map(int id_request, TransportCatalogue& catalogue, RenderSettings render_settings);
+    void execute_queries(TransportCatalogue& catalogue, std::vector<StatRequest>& stat_requests, RenderSettings& render_settings);
+    void execute_render_map(MapRenderer& map_catalogue, TransportCatalogue& catalogue_) const;
+       
+    const Document& get_document();
+ 
 private:
-    const transport::Catalogue& catalogue_;
-    const renderer::MapRenderer& renderer_;
+    Document doc_out;
 };
+    
+}//end namespace request_handler
