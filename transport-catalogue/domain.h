@@ -1,55 +1,43 @@
+/*
+ * В этом файле вы можете разместить классы/структуры, которые являются частью предметной области (domain)
+ * вашего приложения и не зависят от транспортного справочника. Например Автобусные маршруты и Остановки.
+ *
+ * Их можно было бы разместить и в transport_catalogue.h, однако вынесение их в отдельный
+ * заголовочный файл может оказаться полезным, когда дело дойдёт до визуализации карты маршрутов:
+ * визуализатор карты (map_renderer) можно будет сделать независящим от транспортного справочника.
+ *
+ * Если структура вашего приложения не позволяет так сделать, просто оставьте этот файл пустым.
+ *
+ */
+
 #pragma once
- 
-#include <algorithm>
-#include <vector>
-#include <string>
- 
+
 #include "geo.h"
- 
-namespace domain {
- 
-struct StatRequest { 
-    int id;
-    std::string type;
-    std::string name;    
-};
-    
-struct Bus;
-    
-struct Stop {    
-    std::string name;
-    double latitude;
-    double longitude;
-    
-    std::vector<Bus*> buses;
-};
- 
-struct Bus { 
-    std::string name;
-    std::vector<Stop*> stops;
-    bool is_roundtrip;
-    size_t route_length;
-};
- 
-struct Distance {    
-    const Stop* start;
-    const Stop* end;
-    int distance;
-};  
- 
-struct BusQueryResult {
-    std::string_view name;
-    bool not_found;
-    int stops_on_route;
-    int unique_stops;
-    int route_length;
-    double curvature;
-};    
-   
-struct StopQueryResult {
-    std::string_view name;
-    bool not_found;
-    std::vector <std::string> buses_name;
-};
- 
-}//end namespace domain
+
+#include <string>
+#include <vector>
+#include <set>
+#include <unordered_map>
+
+namespace transport {
+
+    struct Stop {
+        std::string name;
+        geo::Coordinates coordinates;
+        std::set<std::string> buses_by_stop;
+    };
+
+    struct Bus {
+        std::string number;
+        std::vector<const Stop*> stops;
+        bool is_circle;
+    };
+
+    struct BusStat {
+        size_t stops_count;
+        size_t unique_stops_count;
+        double route_length;
+        double curvature;
+    };
+
+} // namespace transport
