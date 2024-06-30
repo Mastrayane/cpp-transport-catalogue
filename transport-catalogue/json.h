@@ -37,7 +37,7 @@ namespace json {
 		double AsDouble() const;
 		const std::string& AsString() const;
 		const Array& AsArray() const;
-		const Dict& AsMap() const;
+		const Dict& AsDict() const;
 
 		bool operator==(const Node& rhs) const;
 
@@ -69,4 +69,4 @@ namespace json {
 
 	void Print(const Document& doc, std::ostream& output);
 
-}  // namespace json
+} // namespace json
