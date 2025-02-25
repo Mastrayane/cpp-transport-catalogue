@@ -1,6 +1,9 @@
 #include "json_reader.h"
 #include "json_builder.h"
 
+#include <fstream>
+#include <sstream>
+
 using namespace std::literals;
 
 const json::Node& JsonReader::GetBaseRequests() const {
@@ -45,17 +48,30 @@ const json::Node& JsonReader::GetRoutingSettings() const {
 
 void JsonReader::ProcessRequests(const json::Node& stat_requests, RequestHandler& rh) const {
 	json::Array result;
-	for (auto& request : stat_requests.AsArray()) {
+	for (const auto& request : stat_requests.AsArray()) {
 		const auto& request_map = request.AsDict();
 		const auto& type = request_map.at("type"s).AsString();
-		if (type == "Stop"s) result.push_back(PrintStop(request_map, rh).AsDict());
-		if (type == "Bus"s) result.push_back(PrintRoute(request_map, rh).AsDict());
-		if (type == "Map"s) result.push_back(PrintMap(request_map, rh).AsDict());
-		if (type == "Route"s) result.push_back(PrintRouting(request_map, rh).AsDict());
+
+		if (type == "Stop"s) {
+			result.push_back(PrintStop(request_map, rh).AsDict());
+		}
+		else if (type == "Bus"s) {
+			result.push_back(PrintRoute(request_map, rh).AsDict());
+		}
+		else if (type == "Map"s) {
+			// Обрабатываем запрос "Map" и добавляем результат в массив
+			result.push_back(ProcessMapRequest(request, rh).AsDict());
+		}
+		else if (type == "Route"s) {
+			result.push_back(PrintRouting(request_map, rh).AsDict());
+		}
 	}
 
+	// Выводим весь результат
 	json::Print(json::Document{ result }, std::cout);
 }
+
+
 
 void JsonReader::ProcessStopRequests(transport::Catalogue& catalogue) {
 	const json::Array& arr = GetBaseRequests().AsArray();
@@ -306,4 +322,33 @@ const json::Node JsonReader::PrintRouting(const json::Dict& request_map, Request
 	}
 
 	return result;
+}
+
+void JsonReader::SaveSvgToFile(const std::string& svg_content, const std::string& filename) const {
+	std::ofstream file(filename);
+	if (file.is_open()) {
+		file << svg_content;
+		file.close();
+	}
+	else {
+		throw std::runtime_error("Failed to save SVG to file: " + filename);
+	}
+}
+
+json::Node JsonReader::ProcessMapRequest(const json::Node& request, RequestHandler& rh) const {
+	// Рендерим карту в SVG
+	std::ostringstream svg_stream;
+	svg::Document map = rh.RenderMap();
+	map.Render(svg_stream);
+
+	// Сохраняем SVG в файл
+	SaveSvgToFile(svg_stream.str(), "map.svg");
+
+	// Формируем JSON-ответ
+	return json::Builder{}
+		.StartDict()
+		.Key("map").Value(svg_stream.str())
+		.Key("request_id").Value(request.AsDict().at("id").AsInt())
+		.EndDict()
+		.Build();
 }

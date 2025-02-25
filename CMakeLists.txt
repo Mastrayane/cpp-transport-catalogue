@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Название проекта
-project(TransportGuide VERSION 1.0 LANGUAGES CXX)
+project(TransportCatalogue VERSION 1.0 LANGUAGES CXX)
 
 # Установка стандарта C++ (C++17)
 set(CMAKE_CXX_STANDARD 17)
@@ -47,14 +47,14 @@ set(HEADERS
 )
 
 # Создание исполняемого файла
-add_executable(transport_guide ${SOURCES} ${HEADERS})
+add_executable(transport_catalogue ${SOURCES} ${HEADERS})
 
 # Указание директории с заголовочными файлами
-target_include_directories(transport_guide PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(transport_catalogue PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 # Оптимизация для релизной сборки
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_options(transport_guide PRIVATE /O2)
+    target_compile_options(transport_catalogue PRIVATE /O2)
 endif()
 
 # Установка выходного файла в папку bin
