@@ -46,6 +46,9 @@ public:
     const json::Node PrintMap(const json::Dict& request_map, RequestHandler& rh) const;
     const json::Node PrintRouting(const json::Dict& request_map, RequestHandler& rh) const;
 
+    json::Node ProcessMapRequest(const json::Node& request, RequestHandler& rh) const;
+    void SaveSvgToFile(const std::string& svg_content, const std::string& filename) const;
+
 private:
     json::Document input_;
     json::Node dummy_ = nullptr;
