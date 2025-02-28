@@ -1,20 +1,25 @@
-# Минимальная требуемая версия CMake
 cmake_minimum_required(VERSION 3.16)
-
-# Название проекта
 project(TransportCatalogue VERSION 1.0 LANGUAGES CXX)
 
-# Установка стандарта C++ (C++17)
+# Убедитесь, что папки bin существуют
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/Debug)
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/Release)
+
+# Настройка выходных директорий для всех конфигураций
+foreach(CONFIGURATION Debug Release RelWithDebInfo MinSizeRel)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CONFIGURATION} ${CMAKE_SOURCE_DIR}/bin/${CONFIGURATION})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CONFIGURATION} ${CMAKE_SOURCE_DIR}/bin/${CONFIGURATION})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CONFIGURATION} ${CMAKE_SOURCE_DIR}/bin/${CONFIGURATION})
+endforeach()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Флаги для MSVC
 if (MSVC)
-    add_compile_options(/permissive-)  # Включаем строгий режим C++17
+    add_compile_options(/permissive-)
 endif()
 
-# Добавление исходных файлов
 set(SOURCES
     src/domain.cpp
     src/geo.cpp
@@ -29,7 +34,6 @@ set(SOURCES
     src/main.cpp
 )
 
-# Добавление заголовочных файлов
 set(HEADERS
     src/domain.h
     src/geo.h
@@ -46,16 +50,15 @@ set(HEADERS
     src/transport_router.h
 )
 
-# Создание исполняемого файла
 add_executable(transport_catalogue ${SOURCES} ${HEADERS})
 
-# Указание директории с заголовочными файлами
 target_include_directories(transport_catalogue PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-# Оптимизация для релизной сборки
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_options(transport_catalogue PRIVATE /O2)
-endif()
+# Альтернативное решение через install (рекомендуется)
+# install(TARGETS transport_catalogue DESTINATION bin)
 
-# Установка выходного файла в папку bin
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/build/bin)
+add_custom_command(
+    TARGET transport_catalogue
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:transport_catalogue> ${CMAKE_SOURCE_DIR}/bin/$<CONFIG>/
+)
