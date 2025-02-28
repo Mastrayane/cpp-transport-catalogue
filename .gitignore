@@ -7,6 +7,8 @@
 # Игнорировать папаку build и её содержимое
 build/
 
+*.svg
+
 # Prerequisites
 *.d
 
