@@ -141,6 +141,7 @@ RouteData JsonReader::FillRoute(const json::Dict& request_map, transport::Catalo
 	return route_data;
 }
 
+/*
 renderer::MapRenderer JsonReader::FillRenderSettings(const json::Node& settings) const {
 	json::Dict request_map = settings.AsDict();
 	renderer::RenderSettings render_settings;
@@ -189,6 +190,51 @@ renderer::MapRenderer JsonReader::FillRenderSettings(const json::Node& settings)
 
 	return render_settings;
 }
+*/
+
+renderer::MapRenderer JsonReader::FillRenderSettings(const json::Node& settings) const {
+	json::Dict request_map = settings.AsDict();
+	renderer::RenderSettings render_settings;
+
+	// Чтение только цветовой палитры
+	const json::Array& color_palette = request_map.at("color_palette").AsArray();
+	for (const auto& color_element : color_palette) {
+		if (color_element.IsString()) {
+			render_settings.color_palette.push_back(color_element.AsString());
+		}
+		else if (color_element.IsArray()) {
+			const json::Array& color_type = color_element.AsArray();
+			if (color_type.size() == 3) {
+				render_settings.color_palette.push_back(
+					svg::Rgb(
+						color_type[0].AsInt(),
+						color_type[1].AsInt(),
+						color_type[2].AsInt()
+					)
+				);
+			}
+			else if (color_type.size() == 4) {
+				render_settings.color_palette.push_back(
+					svg::Rgba(
+						color_type[0].AsInt(),
+						color_type[1].AsInt(),
+						color_type[2].AsInt(),
+						color_type[3].AsDouble()
+					)
+				);
+			}
+			else {
+				throw std::logic_error("Wrong color format in palette");
+			}
+		}
+		else {
+			throw std::logic_error("Wrong color type in palette");
+		}
+	}
+
+	return render_settings;
+}
+
 
 transport::RouterSettings JsonReader::FillRoutingSettings(const json::Node& settings) const {
 	return transport::RouterSettings{ settings.AsDict().at("bus_wait_time"s).AsInt(), settings.AsDict().at("bus_velocity"s).AsDouble() };

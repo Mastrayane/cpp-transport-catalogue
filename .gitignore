@@ -1,3 +1,12 @@
+# Игнорировать содержимое папки bin
+/bin/*
+# Но сохранить саму папку и файл .gitkeep
+!/bin/
+!/bin/.gitkeep
+
+# Игнорировать папаку build и её содержимое
+build/
+
 # Prerequisites
 *.d
 
@@ -30,4 +39,3 @@
 *.exe
 *.out
 *.app
-build/

@@ -81,6 +81,7 @@ private:
     double zoom_coeff_ = 0;
 };
 
+/*
 struct RenderSettings {
     double width = 0.0;
     double height = 0.0;
@@ -95,6 +96,28 @@ struct RenderSettings {
     double underlayer_width = 0.0;
     std::vector<svg::Color> color_palette {};
 };
+
+*/
+
+struct RenderSettings {
+    // Статические параметры (значения по умолчанию)
+    double width = 1200.0;
+    double height = 800.0;
+    double padding = 50.0;
+    double stop_radius = 5.0;
+    double line_width = 14.0;
+    int bus_label_font_size = 20;
+    svg::Point bus_label_offset = { 7.0, 15.0 };
+    int stop_label_font_size = 14;
+    svg::Point stop_label_offset = { 7.0, -3.0 };
+    svg::Color underlayer_color = svg::NoneColor;
+    double underlayer_width = 3.0;
+
+    // Единственный динамический параметр
+    std::vector<svg::Color> color_palette = {};
+};
+
+
 
 class MapRenderer {
 public:
